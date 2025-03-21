@@ -1,5 +1,5 @@
 const Train = require("../models/trainList"); // ✅ Ensure correct import path
-const trainService = require("../services/trainList"); // ✅ Ensure correct import path
+const trainService = require("../services/trainListService"); // ✅ Ensure correct import path
 
 /**
  * Get all trains

@@ -3,6 +3,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db"); // Import the DB connection
 const authRoutes = require("./routes/authRoutes"); // Import authentication routes
+const authMiddleware = require("./middlewares/authMiddleware"); // Import authentication middleware
 const errorMiddleware = require("./middlewares/errorMiddleware"); // Import error handler middleware
 const trainRoutes = require("./routes/trainList"); // Import train routes
 
@@ -20,8 +21,10 @@ app.use(express.json()); // Parse incoming JSON requests
 connectDB();
 
 // Use routes
+app.use('/api/auth/*', authMiddleware); // Middleware to verify JWT token
 app.use("/api/auth", authRoutes); // Authentication routes
 app.use("/api/trains", trainRoutes); // Train routes
+
 
 
 // Global error handler middleware

@@ -17,15 +17,29 @@ const app = express();
 app.use(cors()); // Enable CORS for cross-origin requests
 app.use(express.json()); // Parse incoming JSON requests
 
+const checkTokenExpired = (token) => {
+    if (!token) {
+        return true;
+    }
+
+    try {
+        const decodedToken = jwtDecode(token);
+        const currentTime = Date.now() / 1000;
+        return decodedToken.exp < currentTime;
+    } catch (error) {
+        console.error("Error decoding token: ", error);
+        return true;
+    }
+};
+
 // Connect to the database
 connectDB();
 
-// Use routes
-app.use('/api/auth/*', authMiddleware); // Middleware to verify JWT token
-app.use("/api/auth", authRoutes); // Authentication routes
-app.use("/api/trains", trainRoutes); // Train routes
+// Public routes (no token required)
+app.use("/api/auth", authRoutes);
 
-
+// Protected routes (token required)
+app.use("/api/trains", authMiddleware, trainRoutes);
 
 // Global error handler middleware
 app.use(errorMiddleware); // Catch errors globally

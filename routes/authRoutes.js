@@ -35,7 +35,7 @@ router.post("/register", async (req, res, next) => {
 
         // Generate a JWT token
         const payload = { user: { id: newUser._id } };
-        const token = jwt.sign(payload, process.env.SECRET_KEY, {
+        const token = jwt.sign(payload, process.env.JWT_SECRET, {
             expiresIn: "1h",
         });
 
@@ -73,7 +73,7 @@ router.post("/login", async (req, res, next) => {
             error.statusCode = 400;
             return next(error);
         }
-        
+
         // Generate a JWT token
         const payload = { user: { id: user._id } };
         const token = jwt.sign(payload, process.env.JWT_SECRET, {

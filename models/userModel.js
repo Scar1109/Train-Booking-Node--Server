@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
-// User Schema
-const UserSchema = new mongoose.Schema({
+// Define the user schema
+const userSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
@@ -15,12 +15,27 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    date: {
+    accountCreated: {
         type: Date,
         default: Date.now,
     },
+    numBookings: {
+        type: Number,
+        default: 0, // Number of bookings made by the user
+    },
+    totalTicketsBought: {
+        type: Number,
+        default: 0, // Total tickets purchased by the user
+    },
+    lastBookingDate: {
+        type: Date,
+    },
+    isFlaggedForFraud: {
+        type: Boolean,
+        default: false, // Indicates if the user has been flagged for fraud
+    },
 });
 
-const User = mongoose.model("User", UserSchema);
+const User = mongoose.model("User", userSchema);
 
 module.exports = User;

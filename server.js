@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const connectDB = require("./config/db"); // Import the DB connection
 const authRoutes = require("./routes/authRoutes"); // Import authentication routes
 const errorMiddleware = require("./middlewares/errorMiddleware"); // Import error handler middleware
+const trainRoutes = require("./routes/trainList"); // Import train routes
 
 // Load environment variables
 dotenv.config();
@@ -20,6 +21,8 @@ connectDB();
 
 // Use routes
 app.use("/api/auth", authRoutes); // Authentication routes
+app.use("/api/trains", trainRoutes); // Train routes
+
 
 // Global error handler middleware
 app.use(errorMiddleware); // Catch errors globally

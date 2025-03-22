@@ -38,6 +38,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false, // Indicates if the user has been flagged for fraud
     },
+    isSuspended: {
+        type: Boolean,
+        default: false, // New field
+    },
 });
 
 const User = mongoose.model("User", userSchema);

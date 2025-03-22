@@ -20,12 +20,16 @@ router.get("/getAll", authMiddleware, async (req, res) => {
 // ✅ PUT update a booking
 router.put("/update/:id", authMiddleware, async (req, res) => {
     const { id } = req.params;
-    const { numTickets, paymentMethod, price } = req.body;
+    const { numTickets, price, bookingTime } = req.body;
 
     try {
         const updated = await Booking.findByIdAndUpdate(
             id,
-            { numTickets, paymentMethod, price },
+            {
+                numTickets,
+                price,
+                bookingTime, // ✅ include bookingTime (expected as ISO string)
+            },
             { new: true }
         );
 

@@ -7,6 +7,7 @@ const authMiddleware = require("./middlewares/authMiddleware"); // Import authen
 const errorMiddleware = require("./middlewares/errorMiddleware"); // Import error handler middleware
 const trainRoutes = require("./routes/trainList"); // Import train routes
 const userRoutes = require("./routes/userRoutes"); // Import user routes
+const bookingRoutes = require("./routes/bookingRoutes"); // Import booking routes
 
 // Load environment variables
 dotenv.config();
@@ -42,6 +43,7 @@ app.use("/api/auth", authRoutes);
 // Protected routes (token required)
 app.use("/api/trains", authMiddleware, trainRoutes);
 app.use("/api/users", authMiddleware, userRoutes);
+app.use("/api/bookings", authMiddleware, bookingRoutes);
 
 // Global error handler middleware
 app.use(errorMiddleware); // Catch errors globally

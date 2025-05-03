@@ -8,6 +8,8 @@ const errorMiddleware = require("./middlewares/errorMiddleware"); // Import erro
 const trainRoutes = require("./routes/trainList"); // Import train routes
 const userRoutes = require("./routes/userRoutes"); // Import user routes
 const bookingRoutes = require("./routes/bookingRoutes"); // Import booking routes
+const otpRoutes = require("./routes/otpRoutes")
+const ticketRoutes = require("./routes/ticketRoutes") // Import ticket routes
 
 // Load environment variables
 dotenv.config();
@@ -44,6 +46,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/trains", authMiddleware, trainRoutes);
 app.use("/api/users", authMiddleware, userRoutes);
 app.use("/api/bookings", authMiddleware, bookingRoutes);
+app.use("/api/otp", authMiddleware, otpRoutes)
+app.use("/api/tickets", authMiddleware, ticketRoutes)
 
 // Global error handler middleware
 app.use(errorMiddleware); // Catch errors globally

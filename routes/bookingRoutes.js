@@ -3,8 +3,30 @@ const router = express.Router();
 const Booking = require("../models/bookingModel");
 const authMiddleware = require("../middlewares/authMiddleware");
 const dotenv = require("dotenv");
-
 dotenv.config();
+const bookingController = require('../controllers/bookingController');
+
+// Route to create a new booking
+router.post('/create', authMiddleware, bookingController.createBooking);
+
+// Route to get a booking by ID
+router.get('/bookings/:id', bookingController.getBookingById);
+
+// Route to get all bookings for a specific user
+router.get('/bookings/user/:userId', bookingController.getBookingsByUserId);
+
+// Route to cancel a booking
+router.delete('/bookings/:id', bookingController.cancelBooking);
+
+// Route to update booking details
+router.put('/bookings/:id', bookingController.updateBooking);
+
+// Route to get all bookings (for admin)
+router.get('/bookings', bookingController.getAllBookings);
+
+// Route to flag a booking as suspicious
+router.patch('/bookings/:id/flag', bookingController.flagBookingAsSuspicious);
+
 
 // ✅ GET all bookings
 router.get("/getAll", authMiddleware, async (req, res) => {

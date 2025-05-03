@@ -1,16 +1,10 @@
 const mongoose = require("mongoose");
 
-// Define the booking schema
 const bookingSchema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true, // Link each booking to a user
-    },
     ticketId: {
         type: String,
         required: true,
-        unique: true, // Unique ticket ID for each booking
+        unique: true,
     },
     numTickets: {
         type: Number,
@@ -18,27 +12,52 @@ const bookingSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        required: true, // Payment method (e.g., credit_card, debit_card, PayPal)
+        required: true,
     },
     bookingTime: {
         type: Date,
-        default: Date.now, // Timestamp of the booking
+        default: Date.now,
     },
     ipAddress: {
         type: String,
-        required: true, // IP address from where the booking was made
+        required: true,
     },
     isRefunded: {
         type: Boolean,
-        default: false, // Indicates if the booking was refunded
+        default: false,
     },
     price: {
         type: Number,
-        required: true, // Price of the ticket(s)
+        required: true,
     },
     isFlaggedAsSuspicious: {
         type: Boolean,
-        default: false, // Flag to indicate if the booking is suspicious
+        default: false,
+    },
+    passengers: [
+        {
+            title: { type: String, required: true },
+            firstName: { type: String, required: true },
+            lastName: { type: String, required: true },
+            idType: { type: String, required: true },
+            idNumber: { type: String, required: true },
+            gender: { type: String, required: true },
+            age: { type: String },
+            seatPreference: { type: String },
+            mealPreference: { type: String },
+            seatNumber: { type: String },
+        },
+    ],
+    trainDetails: {
+        trainId: { type: String, required: true },
+        trainName: { type: String, required: true },
+        trainNumber: { type: String, required: true },
+        class: { type: String, required: true },
+        departureStation: { type: String, required: true },
+        arrivalStation: { type: String, required: true },
+        departureDate: { type: String, required: true },
+        departureTime: { type: String, required: true },
+        arrivalTime: { type: String, required: true },
     },
 });
 

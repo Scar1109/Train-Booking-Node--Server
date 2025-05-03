@@ -1,100 +1,113 @@
-const express = require("express")
-const router = express.Router()
-const OTP = require("../models/otpModel")
-const User = require("../models/userModel")
-const { sendOtpEmail } = require("../utils/emailService")
-const jwt = require("jsonwebtoken")
+const express = require("express");
+const router = express.Router();
+const OTP = require("../models/otpModel");
+const User = require("../models/userModel");
+const Ticket = require("../models/ticketModel");
+const TransferToken = require("../models/transferToken");
+const { sendOtpEmail, sendTransferLinkEmail } = require("../utils/emailService");
+const crypto = require("crypto");
+const authMiddleware = require("../middlewares/authMiddleware");
 
-// Middleware to verify JWT token
-const verifyToken = (req, res, next) => {
-  const authHeader = req.headers.authorization
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).send({ success: false, message: "Unauthorized: No token provided" })
-  }
-
-  const token = authHeader.split(" ")[1]
-
+// Generate and send OTP for ticket transfer
+router.post("/generate", authMiddleware, async (req, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
-    req.user = decoded
-    next()
-  } catch (error) {
-    return res.status(401).send({ success: false, message: "Unauthorized: Invalid token" })
-  }
-}
+    const { recipientEmail, ticketId, ticketDetails } = req.body;
+    const userId = req.user.id; // Get userId from the decoded JWT
 
-// Generate and send OTP
-router.post("/generate", verifyToken, async (req, res) => {
-  try {
-    const { recipientEmail, ticketId, ticketDetails } = req.body
+    console.log("Attempting to find ticket:", { ticketId, userId });
 
-    if (!recipientEmail || !ticketId || !ticketDetails) {
-      return res.status(400).send({
+    // First try to find the ticket by ID
+    const ticketExists = await Ticket.findById(ticketId);
+    if (!ticketExists) {
+      return res.status(404).send({
         success: false,
-        message: "Recipient email, ticket ID, and ticket details are required",
-      })
+        message: "Ticket not found in the database",
+      });
+    }
+
+    // If ticket exists but doesn't belong to the user
+    if (ticketExists.userId.toString() !== userId) {
+      return res.status(403).send({
+        success: false,
+        message: "This ticket belongs to another user",
+      });
     }
 
     // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(recipientEmail)) {
-      return res.status(400).send({ success: false, message: "Invalid email format" })
+      return res.status(400).send({ success: false, message: "Invalid email format" });
     }
 
     // Check if recipient email exists in the user database
-    const recipientUser = await User.findOne({ email: recipientEmail })
+    const recipientUser = await User.findOne({ email: recipientEmail });
     if (!recipientUser) {
       return res.status(404).send({
         success: false,
         message: "Recipient email is not registered in our system",
-      })
+      });
+    }
+
+    // Check if ticket is active
+    if (ticketExists.status !== "active") {
+      return res.status(400).send({
+        success: false,
+        message: "Only active tickets can be transferred",
+      });
+    }
+
+    // Check transfer limit
+    if (ticketExists.transfers.length >= ticketExists.transferLimit) {
+      return res.status(400).send({
+        success: false,
+        message: "Transfer limit reached for this ticket",
+      });
     }
 
     // Generate a 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Save OTP to database
     const newOTP = new OTP({
       email: recipientEmail,
       otp,
       ticketId,
-    })
-
-    await newOTP.save()
+    });
+    await newOTP.save();
 
     // Send OTP via email
-    const emailResult = await sendOtpEmail(recipientEmail, otp, ticketDetails)
+    const emailResult = await sendOtpEmail(recipientEmail, otp, ticketDetails);
 
     if (!emailResult.success) {
       return res.status(500).send({
         success: false,
         message: "Failed to send OTP email",
         error: emailResult.error,
-      })
+      });
     }
 
     res.send({
       success: true,
       message: "OTP generated and sent successfully",
       expiresIn: 1800, // 30 minutes in seconds
-    })
+    });
   } catch (error) {
-    console.error("Error generating OTP:", error)
-    res.status(500).send({ success: false, message: "Server error", error: error.message })
+    console.error("Error generating OTP:", error);
+    res.status(500).send({ success: false, message: "Server error", error: error.message });
   }
-})
+});
 
-// Verify OTP
-router.post("/verify", verifyToken, async (req, res) => {
+// Verify OTP and generate transfer token
+router.post("/verify", authMiddleware, async (req, res) => {
   try {
-    const { email, otp, ticketId } = req.body
+    const { email, otp, ticketId } = req.body;
+    const userId = req.user.id;
 
     if (!email || !otp || !ticketId) {
       return res.status(400).send({
         success: false,
         message: "Email, OTP, and ticket ID are required",
-      })
+      });
     }
 
     // Find the most recent OTP for this email and ticket
@@ -102,13 +115,13 @@ router.post("/verify", verifyToken, async (req, res) => {
       email,
       ticketId,
       isUsed: false,
-    }).sort({ createdAt: -1 })
+    }).sort({ createdAt: -1 });
 
     if (!otpRecord) {
       return res.status(404).send({
         success: false,
         message: "No valid OTP found for this email and ticket",
-      })
+      });
     }
 
     // Check if OTP matches
@@ -116,22 +129,73 @@ router.post("/verify", verifyToken, async (req, res) => {
       return res.status(400).send({
         success: false,
         message: "Invalid OTP",
-      })
+      });
     }
 
     // Mark OTP as used
-    otpRecord.isUsed = true
-    await otpRecord.save()
+    otpRecord.isUsed = true;
+    await otpRecord.save();
+
+    // Get ticket and sender details
+    const ticket = await Ticket.findById(ticketId);
+    const sender = await User.findById(userId);
+
+    if (!ticket) {
+      return res.status(404).send({
+        success: false,
+        message: "Ticket not found",
+      });
+    }
+
+    // Generate a transfer token
+    const token = crypto.randomBytes(32).toString("hex");
+
+    // Create a new transfer token
+    const transferToken = new TransferToken({
+      token,
+      ticketId,
+      fromUserId: userId,
+      toEmail: email,
+    });
+    await transferToken.save();
+
+    // Generate transfer link
+    const baseUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const transferLink = `${baseUrl}/receive/${token}`;
+
+    // Send transfer link via email
+    const emailResult = await sendTransferLinkEmail(
+      email,
+      transferLink,
+      {
+        from: ticket.from,
+        to: ticket.to,
+        departureTime: ticket.departureTime,
+        trainName: ticket.trainName,
+        ticketNumber: ticket.ticketNumber,
+      },
+      sender ? `${sender.fname} ${sender.lname}` : "A user"
+    );
+
+    if (!emailResult.success) {
+      return res.status(500).send({
+        success: false,
+        message: "Failed to send transfer link email",
+        error: emailResult.error,
+      });
+    }
 
     res.send({
       success: true,
-      message: "OTP verified successfully",
-    })
+      message: "OTP verified successfully and transfer link sent to recipient",
+      token,
+      transferLink,
+      emailSent: true,
+    });
   } catch (error) {
-    console.error("Error verifying OTP:", error)
-    res.status(500).send({ success: false, message: "Server error", error: error.message })
+    console.error("Error verifying OTP:", error);
+    res.status(500).send({ success: false, message: "Server error", error: error.message });
   }
-})
+});
 
-module.exports = router
-
+module.exports = router;
